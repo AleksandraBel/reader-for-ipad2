@@ -1,0 +1,69 @@
+body {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    background-color: #f5f5dc; /* Beige background */
+    color: #333;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Hide scrollbars */
+}
+
+#reader-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+#book-content {
+    flex-grow: 1;
+    font-size: 22px; /* Larger font for readability */
+    line-height: 1.6;
+    overflow-y: hidden; /* Content will be paginated, not scrolled */
+    text-align: justify;
+    columns: 2; /* Create two columns for a book-like feel */
+    column-gap: 40px;
+    height: 90%;
+    width: 100%;
+}
+
+#book-content span {
+    cursor: pointer;
+}
+
+#pagination {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 10px 0;
+}
+
+#pagination button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 5px;
+}
+
+#page-indicator {
+    margin: 0 20px;
+    font-size: 16px;
+}
+
+#translation-popup {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
+    font-size: 18px;
+    max-width: 250px;
+}
+
+.hidden {
+    display: none;
+}
