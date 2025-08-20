@@ -3,19 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>iPad Reader</title>
+    <title>Parallel Reader</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="reader-container">
-        <div id="book-content"></div>
-        <div id="pagination">
-            <button id="prev-page">Previous</button>
-            <span id="page-indicator"></span>
-            <button id="next-page">Next</button>
-        </div>
+    <div id="translation-panel-container">
+        <div id="translation-panel"></div>
     </div>
-    <div id="translation-popup" class="hidden"></div>
+
+    <header id="reader-header">
+        <h1 id="book-title">Loading...</h1>
+        <div id="settings-button">⚙️</div>
+    </header>
+
+    <main id="reader-container">
+        <div id="settings-panel" class="hidden">
+            <div class="setting">
+                <label>Font Size</label>
+                <button id="decrease-font">-</button>
+                <span id="font-size-value">22</span>
+                <button id="increase-font">+</button>
+            </div>
+            <div class="setting">
+                <label>Theme</label>
+                <div id="theme-buttons">
+                    <button data-theme="day" class="theme-button active">Day</button>
+                    <button data-theme="sepia" class="theme-button">Sepia</button>
+                    <button data-theme="night" class="theme-button">Night</button>
+                </div>
+            </div>
+        </div>
+        <div id="viewer"></div>
+        <div id="pagination-controls">
+            <button id="prev-page-button">‹ Previous</button>
+            <span id="page-number-display">Page 1</span>
+            <button id="next-page-button">Next ›</button>
+        </div>
+    </main>
+
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,0 +1,19 @@
+{
+  "name": "reader-for-ipad2",
+  "version": "1.0.0",
+  "description": "A simple EPUB reader for older devices.",
+  "main": "script.js",
+  "scripts": {
+    "start": "http-server . -p 8080 -o",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "epub",
+    "reader"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
