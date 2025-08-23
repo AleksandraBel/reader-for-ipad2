@@ -1,50 +1,70 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Polyfill for Element.closest() ---
+    if (!Element.prototype.closest) {
+        Element.prototype.closest = function(s) {
+            var el = this;
+            do {
+                if (el.matches(s)) return el;
+                el = el.parentElement || el.parentNode;
+            } while (el !== null && el.nodeType === 1);
+            return null;
+        };
+    }
+    // Polyfill for Element.matches()
+    if (!Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+    }
+
     // --- DOM Elements ---
-    const viewer = document.getElementById('viewer');
-    const translationPanelContainer = document.getElementById('translation-panel-container');
-    const translationPanel = document.getElementById('translation-panel');
-    const bookTitle = document.getElementById('book-title');
-    const settingsButton = document.getElementById('settings-button');
-    const settingsPanel = document.getElementById('settings-panel');
-    const prevPageButton = document.getElementById('prev-page-button');
-    const nextPageButton = document.getElementById('next-page-button');
-    const pageNumDisplay = document.getElementById('page-number-display');
-    const singleWordPanel = document.getElementById('single-word-translation-panel');
+    var viewer = document.getElementById('viewer');
+    var translationPanelContainer = document.getElementById('translation-panel-container');
+    var translationPanel = document.getElementById('translation-panel');
+    var bookTitle = document.getElementById('book-title');
+    var settingsButton = document.getElementById('settings-button');
+    var settingsPanel = document.getElementById('settings-panel');
+    var prevPageButton = document.getElementById('prev-page-button');
+    var nextPageButton = document.getElementById('next-page-button');
+    var pageNumDisplay = document.getElementById('page-number-display');
+    var singleWordPanel = document.getElementById('single-word-translation-panel');
 
     // --- File Paths ---
-    const originalBookPath = 'books/Moby-Dick.txt';
-    const translatedBookPath = 'books/Moby-Dick(ru).txt';
+    var originalBookPath = 'books/Moby-Dick.txt';
+    var translatedBookPath = 'books/Moby-Dick(ru).txt';
 
     // --- State ---
-    let lastHighlightedOriginalWord = null;
-    let lastHighlightedTranslatedWord = null;
-    let originalParagraphs = []; // Will hold all <p> elements of the original book
-    let currentPage = 1;
-    const paragraphsPerPage = 20; // Adjust this to change page size
-    let totalPages = 0;
+    var lastHighlightedOriginalWord = null;
+    var lastHighlightedTranslatedWord = null;
+    var originalParagraphStrings = []; // Holds all paragraph strings of the original book
+    var translatedParagraphStrings = []; // Holds all paragraph strings of the translated book
+    var currentPage = 1;
+    var paragraphsPerPage = 20; // Adjust this to change page size
+    var totalPages = 0;
 
     /**
-     * Processes text into an array of paragraph elements with word spans.
-     * @param {string} text - The text to process.
+     * Processes an array of paragraph strings into an array of paragraph DOM elements.
+     * @param {Array<string>} paragraphStrings - The array of strings to process.
+     * @param {number} paragraphOffset - The starting index for segment IDs.
      * @returns {Array<HTMLElement>} - An array of <p> elements.
      */
-    function processTextToParagraphs(text) {
-        const processedParagraphs = [];
-        const segments = text.split(/\n+/).filter(s => s.trim() !== '');
+    function processParagraphsToDom(paragraphStrings, paragraphOffset) {
+        var processedParagraphs = [];
+        for (var i = 0; i < paragraphStrings.length; i++) {
+            var segment = paragraphStrings[i];
+            var pIndex = paragraphOffset + i;
 
-        segments.forEach((segment, pIndex) => {
-            const p = document.createElement('p');
-            p.dataset.segmentId = pIndex;
+            var p = document.createElement('p');
+            p.setAttribute('data-segment-id', pIndex);
 
-            const words = segment.trim().split(/\s+/);
-            words.forEach((word, wIndex) => {
-                const span = document.createElement('span');
+            var words = segment.trim().split(/\s+/);
+            for (var j = 0; j < words.length; j++) {
+                var word = words[j];
+                var span = document.createElement('span');
                 span.textContent = word + ' ';
-                span.dataset.wordId = `${pIndex}-${wIndex}`;
+                span.setAttribute('data-word-id', pIndex + '-' + j);
                 p.appendChild(span);
-            });
+            }
             processedParagraphs.push(p);
-        });
+        }
         return processedParagraphs;
     }
 
@@ -53,89 +73,116 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {number} page - The page number to render.
      */
     function renderPage(page) {
-        viewer.innerHTML = '';
-        const startIndex = (page - 1) * paragraphsPerPage;
-        const endIndex = startIndex + paragraphsPerPage;
-        const pageParagraphs = originalParagraphs.slice(startIndex, endIndex);
+        viewer.innerHTML = ''; // Clear existing content
+        var startIndex = (page - 1) * paragraphsPerPage;
+        var endIndex = startIndex + paragraphsPerPage;
+        var pageParagraphStrings = originalParagraphStrings.slice(startIndex, endIndex);
 
-        pageParagraphs.forEach(p => viewer.appendChild(p));
+        var pageParagraphDoms = processParagraphsToDom(pageParagraphStrings, startIndex);
+        for (var i = 0; i < pageParagraphDoms.length; i++) {
+            viewer.appendChild(pageParagraphDoms[i]);
+        }
 
         // Update UI
-        pageNumDisplay.textContent = `Page ${page} of ${totalPages}`;
+        pageNumDisplay.textContent = 'Page ' + page + ' of ' + totalPages;
         prevPageButton.disabled = page === 1;
         nextPageButton.disabled = page === totalPages;
         currentPage = page;
+        window.scrollTo(0, 0); // Scroll to top on page change
     }
 
     /**
      * Fetches a translation for a single word using MyMemory API.
      * @param {string} word - The word to translate.
-     * @returns {Promise<string>} - The translated text.
+     * @param {function} callback - The callback to execute with the result.
      */
-    async function getTranslation(word) {
-        const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Clean the word
+    function getTranslation(word, callback) {
+        var cleanedWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Clean the word
         if (!cleanedWord) {
-            return `${word}: (не слово)`;
+            callback(word + ': (не слово)');
+            return;
         }
 
-        const apiUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanedWord)}&langpair=en|ru`;
+        var apiUrl = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(cleanedWord) + '&langpair=en|ru';
 
-        try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.statusText}`);
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', apiUrl, true);
+
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.responseStatus !== 200) {
+                        callback(word + ': (перевод не найден)');
+                        return;
+                    }
+                    var translation = data.responseData.translatedText;
+                    if (translation.toLowerCase() === cleanedWord) {
+                        callback(word + ': (перевод не найден)');
+                        return;
+                    }
+                    var firstTranslation = translation.split(';')[0].split(',')[0].trim();
+                    callback(word + ': ' + firstTranslation);
+                } catch (e) {
+                    callback('Ошибка обработки перевода.');
+                }
+            } else {
+                callback('Ошибка перевода.');
             }
-            const data = await response.json();
-            
-            if (data.responseStatus !== 200) {
-                 console.warn('MyMemory API returned an error:', data.responseDetails);
-                 return `${word}: (перевод не найден)`;
-            }
-
-            const translation = data.responseData.translatedText;
-
-            if (translation.toLowerCase() === cleanedWord) {
-                 return `${word}: (перевод не найден)`;
-            }
-
-            const firstTranslation = translation.split(';')[0].split(',')[0].trim();
-            return `${word}: ${firstTranslation}`;
-
-        } catch (error) {
-            console.error('Translation API error:', error);
-            throw new Error('Failed to fetch translation.');
-        }
+        };
+        xhr.onerror = function() {
+            callback('Ошибка сети при переводе.');
+        };
+        xhr.send();
     }
 
     // --- Main Logic ---
-    Promise.all([
-        fetch(originalBookPath).then(res => res.text()),
-        fetch(translatedBookPath).then(res => res.text())
-    ])
-    .then(([originalText, translatedText]) => {
-        originalParagraphs = processTextToParagraphs(originalText);
-        totalPages = Math.ceil(originalParagraphs.length / paragraphsPerPage);
+    function getText(url, callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                callback(null, xhr.responseText);
+            } else {
+                callback(new Error('Failed to load text file: ' + url));
+            }
+        };
+        xhr.onerror = function() {
+            callback(new Error('Network error while fetching text file: ' + url));
+        };
+        xhr.send();
+    }
 
-        const translationParagraphs = processTextToParagraphs(translatedText);
-        translationPanel.innerHTML = '';
-        translationParagraphs.forEach(p => translationPanel.appendChild(p));
+    getText(originalBookPath, function(err, originalText) {
+        if (err) {
+            console.error('Error loading original book:', err);
+            viewer.textContent = 'Failed to load book content.';
+            return;
+        }
+        getText(translatedBookPath, function(err, translatedText) {
+            if (err) {
+                console.error('Error loading translated book:', err);
+                viewer.textContent = 'Failed to load book content.';
+                return;
+            }
 
-        bookTitle.textContent = "Moby Dick";
-        renderPage(1); // Render the first page
-    })
-    .catch(error => {
-        console.error('Error loading books:', error);
-        viewer.textContent = 'Failed to load book content.';
+            originalParagraphStrings = originalText.split(/\n+/).filter(function(s) { return s.trim() !== ''; });
+            translatedParagraphStrings = translatedText.split(/\n+/).filter(function(s) { return s.trim() !== ''; });
+            totalPages = Math.ceil(originalParagraphStrings.length / paragraphsPerPage);
+
+            bookTitle.textContent = "Moby Dick";
+            renderPage(1); // Render the first page
+        });
     });
 
     // --- Event Listeners ---
-    prevPageButton.addEventListener('click', () => {
+    prevPageButton.addEventListener('click', function() {
         if (currentPage > 1) {
             renderPage(currentPage - 1);
         }
     });
 
-    nextPageButton.addEventListener('click', () => {
+    nextPageButton.addEventListener('click', function() {
         if (currentPage < totalPages) {
             renderPage(currentPage + 1);
         }
@@ -143,14 +190,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle clicks on the original text to show the panel and highlight word
     viewer.addEventListener('click', function(event) {
-        const targetWord = event.target.closest('span[data-word-id]');
+        var targetWord = event.target.closest('span[data-word-id]');
         if (!targetWord) return;
+
+        // --- Update Translation Panel On-Demand ---
+        var segmentId = parseInt(targetWord.closest('p').getAttribute('data-segment-id'), 10);
+        var translatedParagraphString = translatedParagraphStrings[segmentId];
+        if (translatedParagraphString) {
+            var translatedDom = processParagraphsToDom([translatedParagraphString], segmentId);
+            translationPanel.innerHTML = '';
+            translationPanel.appendChild(translatedDom[0]);
+        }
+        // --- End On-Demand Update ---
 
         translationPanelContainer.classList.add('visible');
         document.body.classList.add('panel-visible');
 
-        const wordId = targetWord.dataset.wordId;
-        const translatedWord = translationPanel.querySelector(`span[data-word-id="${wordId}"]`);
+        var wordId = targetWord.getAttribute('data-word-id');
+        var translatedWord = translationPanel.querySelector('span[data-word-id="' + wordId + '"]');
 
         if (lastHighlightedOriginalWord) lastHighlightedOriginalWord.classList.remove('highlight-word');
         if (lastHighlightedTranslatedWord) lastHighlightedTranslatedWord.classList.remove('highlight-word');
@@ -161,7 +218,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (translatedWord) {
             translatedWord.classList.add('highlight-word');
             lastHighlightedTranslatedWord = translatedWord;
-            translatedWord.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            translatedWord.scrollIntoView();
+        }
+
+        // --- Single Word Translation ---
+        singleWordPanel.classList.add('visible');
+        var word = targetWord.textContent.trim();
+        if (word) {
+            singleWordPanel.textContent = 'Перевод...';
+            getTranslation(word, function(translation) {
+                singleWordPanel.textContent = translation;
+            });
         }
     });
 
@@ -170,52 +237,43 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target === translationPanelContainer || event.target === translationPanel) {
             translationPanelContainer.classList.remove('visible');
             document.body.classList.remove('panel-visible');
-            singleWordPanel.classList.remove('visible'); // Hide single word panel too
+            singleWordPanel.classList.remove('visible');
         }
     });
 
     // Toggle settings panel
-    settingsButton.addEventListener('click', () => {
+    settingsButton.addEventListener('click', function() {
         settingsPanel.classList.toggle('hidden');
     });
 
     // --- Drag-to-Scroll for Translation Panel ---
-    let isDown = false;
-    let startX;
-    let scrollLeft;
+    var isDown = false;
+    var startX;
+    var scrollLeft;
 
-    translationPanelContainer.addEventListener('mousedown', (e) => {
+    translationPanelContainer.addEventListener('mousedown', function(e) {
         isDown = true;
         translationPanelContainer.classList.add('active');
         startX = e.pageX - translationPanelContainer.offsetLeft;
         scrollLeft = translationPanelContainer.scrollLeft;
     });
-
-    translationPanelContainer.addEventListener('mouseleave', () => {
-        isDown = false;
-        translationPanelContainer.classList.remove('active');
-    });
-
-    translationPanelContainer.addEventListener('mouseup', () => {
-        isDown = false;
-        translationPanelContainer.classList.remove('active');
-    });
-
-    translationPanelContainer.addEventListener('mousemove', (e) => {
+    translationPanelContainer.addEventListener('mouseleave', function() { isDown = false; translationPanelContainer.classList.remove('active'); });
+    translationPanelContainer.addEventListener('mouseup', function() { isDown = false; translationPanelContainer.classList.remove('active'); });
+    translationPanelContainer.addEventListener('mousemove', function(e) {
         if (!isDown) return;
         e.preventDefault();
-        const x = e.pageX - translationPanelContainer.offsetLeft;
-        const walk = (x - startX) * 2;
+        var x = e.pageX - translationPanelContainer.offsetLeft;
+        var walk = (x - startX) * 2;
         translationPanelContainer.scrollLeft = scrollLeft - walk;
     });
 
     // --- Settings (Font Size, Theme) ---
-    const decreaseFontButton = document.getElementById('decrease-font');
-    const increaseFontButton = document.getElementById('increase-font');
-    const fontSizeValue = document.getElementById('font-size-value');
-    const themeButtons = document.querySelectorAll('.theme-button');
+    var decreaseFontButton = document.getElementById('decrease-font');
+    var increaseFontButton = document.getElementById('increase-font');
+    var fontSizeValue = document.getElementById('font-size-value');
+    var themeButtons = document.querySelectorAll('.theme-button');
 
-    let currentFontSize = 22;
+    var currentFontSize = 22;
     function applyFontSize() {
         viewer.style.fontSize = currentFontSize + 'px';
         fontSizeValue.textContent = currentFontSize;
@@ -225,56 +283,27 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyTheme(theme) {
         document.body.className = 'theme-' + theme;
         localStorage.setItem('parallelReaderTheme', theme);
-        themeButtons.forEach(button => {
-            button.classList.toggle('active', button.getAttribute('data-theme') === theme);
-        });
+        for (var i = 0; i < themeButtons.length; i++) {
+            themeButtons[i].classList.toggle('active', themeButtons[i].getAttribute('data-theme') === theme);
+        }
     }
 
-    decreaseFontButton.addEventListener('click', () => {
-        if (currentFontSize > 10) {
-            currentFontSize -= 2;
-            applyFontSize();
-        }
+    decreaseFontButton.addEventListener('click', function() { 
+        if (currentFontSize > 10) { currentFontSize -= 2; applyFontSize(); } 
+    });
+    increaseFontButton.addEventListener('click', function() { 
+        if (currentFontSize < 48) { currentFontSize += 2; applyFontSize(); } 
     });
 
-    increaseFontButton.addEventListener('click', () => {
-        if (currentFontSize < 48) {
-            currentFontSize += 2;
-            applyFontSize();
-        }
-    });
-
-    themeButtons.forEach(button => {
-        button.addEventListener('click', function() {
+    for (var i = 0; i < themeButtons.length; i++) {
+        themeButtons[i].addEventListener('click', function() {
             applyTheme(this.getAttribute('data-theme'));
         });
-    });
+    }
 
     // Load saved settings on start
     currentFontSize = parseInt(localStorage.getItem('parallelReaderFontSize') || '22', 10);
     applyFontSize();
-    const savedTheme = localStorage.getItem('parallelReaderTheme') || 'day';
+    var savedTheme = localStorage.getItem('parallelReaderTheme') || 'day';
     applyTheme(savedTheme);
-
-    // --- Single Word Translation ---
-    viewer.addEventListener('click', async function(event) {
-        const targetWordSpan = event.target.closest('span[data-word-id]');
-        if (!targetWordSpan) return;
-
-        translationPanelContainer.classList.add('visible');
-        document.body.classList.add('panel-visible');
-        singleWordPanel.classList.add('visible'); // Show single word panel
-
-        const word = targetWordSpan.textContent.trim();
-        if (word) {
-            singleWordPanel.textContent = 'Перевод...';
-            try {
-                const translation = await getTranslation(word);
-                singleWordPanel.textContent = translation;
-            } catch (error) {
-                console.error("Translation error:", error);
-                singleWordPanel.textContent = 'Ошибка перевода.';
-            }
-        }
-    });
 });

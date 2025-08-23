@@ -41,9 +41,372 @@ body {
     transform: translateY(0); /* Show panel */
 }
 
+/* --- General Layout --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-transition: background-color 0.3s, color 0.3s;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- Translation Panel (Top) --- */
+#translation-panel-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100px; /* Increased height for better touch/drag interaction */
+    background-color: #e9e9e9;
+    border-bottom: 1px solid #ccc;
+    z-index: 200;
+    overflow-x: scroll; /* Use 'scroll' to ensure it's always scrollable */
+    overflow-y: hidden;
+    padding: 0 20px;
+    cursor: grab; /* Add grab cursor */
+    -webkit-user-select: none; /* Prevent text selection while dragging */
+    user-select: none;
+    -webkit-transform: translateY(-100%); /* Hide panel by default */
+    transform: translateY(-100%);
+    -webkit-transition: -webkit-transform 0.3s ease-in-out;
+    transition: transform 0.3s ease-in-out;
+
+    /* Hide scrollbar */
+    scrollbar-width: none; /* For Firefox */
+    -ms-overflow-style: none;  /* For Internet Explorer and Edge */
+}
+
+#translation-panel-container.visible {
+    -webkit-transform: translateY(0); /* Show panel */
+    transform: translateY(0);
+}
+
 #translation-panel-container::-webkit-scrollbar {
     display: none; /* For Chrome, Safari, and Opera */
 }
+
+#translation-panel-container.active {
+    cursor: grabbing; /* Change cursor when dragging */
+    cursor: -webkit-grabbing;
+}
+
+#translation-panel {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-align-items: center;
+    align-items: center;
+    height: 100%;
+    white-space: nowrap; /* Crucial for horizontal layout */
+}
+
+#translation-panel p {
+    display: inline-block; /* Allows paragraphs to sit side-by-side */
+    margin: 0 1em 0 0;
+    padding: 10px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    -webkit-transition: background-color 0.3s;
+    transition: background-color 0.3s;
+    -webkit-flex-shrink: 0; /* Prevent paragraphs from shrinking */
+    flex-shrink: 0;
+}
+
+#translation-panel p.highlight {
+    background-color: #cce5ff; /* Highlight color for translated segment */
+}
+
+
+/* --- Header (Below Translation Panel) --- */
+#reader-header {
+    padding: 10px 20px;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+    -webkit-align-items: center;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+    margin-top: 0; /* No margin by default */
+    height: 50px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    -webkit-transition: margin-top 0.3s ease-in-out; /* Smooth transition */
+    transition: margin-top 0.3s ease-in-out;
+}
+
+body.panel-visible #reader-header {
+    margin-top: 100px; /* Push header down when panel is visible */
+}
+
+#book-title {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+#settings-button {
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+/* --- Main Content (Viewer) --- */
+#reader-container {
+    -webkit-flex-grow: 1;
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+}
+
+#viewer {
+    padding: 20px 40px;
+    -webkit-flex-grow: 1; /* Let it take available space */
+    flex-grow: 1;
+    overflow-y: auto; /* Allow scrolling within a page if content overflows */
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    line-height: 1.7;
+    font-size: 22px;
+}
+
+#pagination-controls {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: center;
+    justify-content: center;
+    -webkit-align-items: center;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
+}
+
+#pagination-controls button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 8px 16px;
+    cursor: pointer;
+    -webkit-border-radius: 4px;
+    border-radius: 4px;
+}
+
+#pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#page-number-display {
+    margin: 0 20px;
+    font-size: 1em;
+    min-width: 80px;
+    text-align: center;
+}
+
+#viewer p {
+    cursor: pointer;
+    padding: 5px;
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+    -webkit-transition: background-color 0.3s;
+    transition: background-color 0.3s;
+}
+
+#viewer p:hover {
+    background-color: #f0f0f0;
+}
+
+#viewer p.highlight {
+    background-color: #fff3cd; /* Highlight color for original segment */
+}
+
+.highlight-word {
+    background-color: #ffd700; /* A distinct color for word highlighting */
+    -webkit-border-radius: 3px;
+    border-radius: 3px;
+}
+
+
+/* --- Settings Panel --- */
+#settings-panel {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ccc;
+    -webkit-border-radius: 8px;
+    border-radius: 8px;
+    padding: 15px;
+    -webkit-box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 300;
+}
+
+.hidden {
+    display: none;
+}
+
+/* --- Theme Adjustments --- */
+
+/* --- Day Theme (Default) --- */
+body.theme-day {
+    background-color: #ffffff;
+    color: #212529;
+}
+body.theme-day #translation-panel-container {
+    background-color: #e9e9e9;
+    border-bottom-color: #ccc;
+}
+body.theme-day #viewer p:hover {
+    background-color: #f0f0f0;
+}
+body.theme-day #settings-panel {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: #ccc;
+}
+body.theme-day #pagination-controls button {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+    color: #212529;
+}
+
+
+/* --- Sepia Theme --- */
+body.theme-sepia {
+    background-color: #fbf0d9;
+    color: #5b4636;
+}
+body.theme-sepia #translation-panel-container {
+    background-color: #e9e2d1;
+    border-bottom-color: #d9c8a9;
+}
+body.theme-sepia #viewer p:hover {
+    background-color: #e9e2d1;
+}
+body.theme-sepia #settings-panel {
+    background-color: #f8f2e3;
+    border-color: #d9c8a9;
+}
+body.theme-sepia #pagination-controls button {
+    background-color: #e9e2d1;
+    border-color: #d9c8a9;
+    color: #5b4636;
+}
+body.theme-sepia #theme-buttons .theme-button.active {
+    border-color: #5b4636;
+}
+
+
+/* --- Night Theme --- */
+body.theme-night {
+    background-color: #121212;
+    color: #b3b3b3;
+}
+body.theme-night #translation-panel-container {
+    background-color: #1e1e1e;
+    border-bottom-color: #333;
+}
+body.theme-night #translation-panel p.highlight {
+    background-color: #003366;
+}
+body.theme-night #reader-header {
+    border-bottom-color: #333;
+}
+body.theme-night #viewer p:hover {
+    background-color: #2a2a2a;
+}
+body.theme-night #viewer p.highlight {
+    background-color: #5a4d1d;
+}
+body.theme-night #settings-panel {
+    background-color: #333;
+    border-color: #555;
+}
+/* Other theme styles from previous version are omitted for brevity but can be added back */
+.setting { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin-bottom: 10px; }
+.setting:last-child { margin-bottom: 0; }
+.setting label { margin-right: 10px; min-width: 80px; }
+.setting button { font-size: 1em; padding: 5px 10px; border: 1px solid #ccc; background-color: #f0f0f0; cursor: pointer; -webkit-border-radius: 4px; border-radius: 4px; }
+#font-size-value { margin: 0 10px; min-width: 30px; text-align: center; }
+#theme-buttons .theme-button { margin-right: 5px; border: 2px solid transparent; }
+#theme-buttons .theme-button.active { border-color: #007bff; }
+
+/* --- Single Word Translation --- */
+#single-word-translation-panel {
+    position: fixed;
+    top: 100px; /* Position it directly below the main panel */
+    left: 20px;
+    z-index: 199; /* Just below the main panel */
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-top: none; /* Avoid double border */
+    -webkit-border-radius: 0 0 5px 5px;
+    border-radius: 0 0 5px 5px;
+    padding: 5px 10px;
+    font-size: 15px;
+    color: #343a40;
+    -webkit-box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-width: 300px;
+    opacity: 0; /* Hidden by default */
+    pointer-events: none; /* Cannot be interacted with when hidden */
+    -webkit-transition: opacity 0.3s ease-in-out, -webkit-transform 0.3s ease-in-out;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    -webkit-transform: translateY(-20px); /* Start slightly higher */
+    transform: translateY(-20px);
+}
+
+#single-word-translation-panel.visible {
+    opacity: 1;
+    pointer-events: auto;
+    -webkit-transform: translateY(0); /* Move to final position */
+    transform: translateY(0);
+}
+
+body.theme-night #single-word-translation-panel {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #ccc;
+}
+
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 600px) {
+    #viewer {
+        padding: 15px;
+        font-size: 18px;
+    }
+
+    #reader-header {
+        padding: 5px 15px;
+    }
+
+    #book-title {
+        font-size: 1em;
+    }
+
+    #pagination-controls {
+        padding: 8px;
+    }
+
+    #pagination-controls button {
+        padding: 6px 12px;
+    }
+
+    #page-number-display {
+        margin: 0 10px;
+    }
+}
+
 
 #translation-panel-container.active {
     cursor: grabbing; /* Change cursor when dragging */
