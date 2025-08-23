@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const prevPageButton = document.getElementById('prev-page-button');
     const nextPageButton = document.getElementById('next-page-button');
     const pageNumDisplay = document.getElementById('page-number-display');
+    const singleWordPanel = document.getElementById('single-word-translation-panel');
 
     // --- File Paths ---
     const originalBookPath = 'books/Moby-Dick.txt';
@@ -66,17 +67,55 @@ document.addEventListener('DOMContentLoaded', function() {
         currentPage = page;
     }
 
+    /**
+     * Fetches a translation for a single word using MyMemory API.
+     * @param {string} word - The word to translate.
+     * @returns {Promise<string>} - The translated text.
+     */
+    async function getTranslation(word) {
+        const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, ''); // Clean the word
+        if (!cleanedWord) {
+            return `${word}: (не слово)`;
+        }
+
+        const apiUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanedWord)}&langpair=en|ru`;
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.statusText}`);
+            }
+            const data = await response.json();
+            
+            if (data.responseStatus !== 200) {
+                 console.warn('MyMemory API returned an error:', data.responseDetails);
+                 return `${word}: (перевод не найден)`;
+            }
+
+            const translation = data.responseData.translatedText;
+
+            if (translation.toLowerCase() === cleanedWord) {
+                 return `${word}: (перевод не найден)`;
+            }
+
+            const firstTranslation = translation.split(';')[0].split(',')[0].trim();
+            return `${word}: ${firstTranslation}`;
+
+        } catch (error) {
+            console.error('Translation API error:', error);
+            throw new Error('Failed to fetch translation.');
+        }
+    }
+
     // --- Main Logic ---
     Promise.all([
         fetch(originalBookPath).then(res => res.text()),
         fetch(translatedBookPath).then(res => res.text())
     ])
     .then(([originalText, translatedText]) => {
-        // Process and store all original paragraphs
         originalParagraphs = processTextToParagraphs(originalText);
         totalPages = Math.ceil(originalParagraphs.length / paragraphsPerPage);
 
-        // Process and display the translation panel (it's not paginated)
         const translationParagraphs = processTextToParagraphs(translatedText);
         translationPanel.innerHTML = '';
         translationParagraphs.forEach(p => translationPanel.appendChild(p));
@@ -131,6 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target === translationPanelContainer || event.target === translationPanel) {
             translationPanelContainer.classList.remove('visible');
             document.body.classList.remove('panel-visible');
+            singleWordPanel.classList.remove('visible'); // Hide single word panel too
         }
     });
 
@@ -215,4 +255,26 @@ document.addEventListener('DOMContentLoaded', function() {
     applyFontSize();
     const savedTheme = localStorage.getItem('parallelReaderTheme') || 'day';
     applyTheme(savedTheme);
+
+    // --- Single Word Translation ---
+    viewer.addEventListener('click', async function(event) {
+        const targetWordSpan = event.target.closest('span[data-word-id]');
+        if (!targetWordSpan) return;
+
+        translationPanelContainer.classList.add('visible');
+        document.body.classList.add('panel-visible');
+        singleWordPanel.classList.add('visible'); // Show single word panel
+
+        const word = targetWordSpan.textContent.trim();
+        if (word) {
+            singleWordPanel.textContent = 'Перевод...';
+            try {
+                const translation = await getTranslation(word);
+                singleWordPanel.textContent = translation;
+            } catch (error) {
+                console.error("Translation error:", error);
+                singleWordPanel.textContent = 'Ошибка перевода.';
+            }
+        }
+    });
 });

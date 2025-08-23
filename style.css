@@ -185,6 +185,57 @@ body.panel-visible #reader-header {
 }
 
 /* --- Theme Adjustments --- */
+
+/* --- Day Theme (Default) --- */
+body.theme-day {
+    background-color: #ffffff;
+    color: #212529;
+}
+body.theme-day #translation-panel-container {
+    background-color: #e9e9e9;
+    border-bottom-color: #ccc;
+}
+body.theme-day #viewer p:hover {
+    background-color: #f0f0f0;
+}
+body.theme-day #settings-panel {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: #ccc;
+}
+body.theme-day #pagination-controls button {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+    color: #212529;
+}
+
+
+/* --- Sepia Theme --- */
+body.theme-sepia {
+    background-color: #fbf0d9;
+    color: #5b4636;
+}
+body.theme-sepia #translation-panel-container {
+    background-color: #e9e2d1;
+    border-bottom-color: #d9c8a9;
+}
+body.theme-sepia #viewer p:hover {
+    background-color: #e9e2d1;
+}
+body.theme-sepia #settings-panel {
+    background-color: #f8f2e3;
+    border-color: #d9c8a9;
+}
+body.theme-sepia #pagination-controls button {
+    background-color: #e9e2d1;
+    border-color: #d9c8a9;
+    color: #5b4636;
+}
+body.theme-sepia #theme-buttons .theme-button.active {
+    border-color: #5b4636;
+}
+
+
+/* --- Night Theme --- */
 body.theme-night {
     background-color: #121212;
     color: #b3b3b3;
@@ -217,3 +268,36 @@ body.theme-night #settings-panel {
 #font-size-value { margin: 0 10px; min-width: 30px; text-align: center; }
 #theme-buttons .theme-button { margin-right: 5px; border: 2px solid transparent; }
 #theme-buttons .theme-button.active { border-color: #007bff; }
+
+/* --- Single Word Translation --- */
+#single-word-translation-panel {
+    position: fixed;
+    top: var(--panel-height); /* Position it directly below the main panel */
+    left: 20px;
+    z-index: 199; /* Just below the main panel */
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-top: none; /* Avoid double border */
+    border-radius: 0 0 5px 5px;
+    padding: 5px 10px;
+    font-size: 15px;
+    color: #343a40;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-width: 300px;
+    opacity: 0; /* Hidden by default */
+    pointer-events: none; /* Cannot be interacted with when hidden */
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    transform: translateY(-20px); /* Start slightly higher */
+}
+
+#single-word-translation-panel.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0); /* Move to final position */
+}
+
+body.theme-night #single-word-translation-panel {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: #ccc;
+}
